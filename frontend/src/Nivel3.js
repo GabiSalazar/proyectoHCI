@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import MensajesPrediccion from './MensajesPrediccion';
+import MensajesPrediccionNivel3 from './MensajesPrediccionNivel3';
 
 import patito from '../src/images/patito.png';
 import cerdito from '../src/images/cerdito.png';
@@ -14,12 +16,35 @@ import solsiete from '../src/images/numero7.png';
 import solocho from '../src/images/numero8.png';
 import solnueve from '../src/images/numero9.png';
 
+//Importar los audios de patitos
+import patito1 from '../src/sounds/patitos/patito1.MP3';
+import patito2 from '../src/sounds/patitos/patito2.MP3';
+import patito3 from '../src/sounds/patitos/patito3.MP3';
+import patito4 from '../src/sounds/patitos/patito4.MP3';
+import patito5 from '../src/sounds/patitos/patito5.MP3';
+import patito6 from '../src/sounds/patitos/patito6.MP3';
+import patito7 from '../src/sounds/patitos/patito7.MP3';
+import patito8 from '../src/sounds/patitos/patito8.MP3';
+import patito9 from '../src/sounds/patitos/patito9.MP3';
+
+//Importar los audios de cerditos
+import cerdito1 from '../src/sounds/cerditos/cerdito1.MP3';
+import cerdito2 from '../src/sounds/cerditos/cerdito2.MP3';
+import cerdito3 from '../src/sounds/cerditos/cerdito3.MP3';
+import cerdito4 from '../src/sounds/cerditos/cerdito4.MP3';
+import cerdito5 from '../src/sounds/cerditos/cerdito5.MP3';
+import cerdito6 from '../src/sounds/cerditos/cerdito6.MP3';
+import cerdito7 from '../src/sounds/cerditos/cerdito7.MP3';
+import cerdito8 from '../src/sounds/cerditos/cerdito8.MP3';
+import cerdito9 from '../src/sounds/cerditos/cerdito9.MP3';
+
 import time from '../src/sounds/time.mp3';
 import success from '../src/sounds/success.mp3';
 import encouragement from '../src/sounds/encouragement.mp3';
 import completed from '../src/sounds/completed.mp3';
 
 const Nivel3 = ({ player, onBack, onConfigClick }) => {
+
   const [animalSeleccionado, setAnimalSeleccionado] = useState(null);
   const [cantidadActual, setCantidadActual] = useState(0);
   const [userInput, setUserInput] = useState('');
@@ -51,6 +76,32 @@ const Nivel3 = ({ player, onBack, onConfigClick }) => {
   const successAudioRef = useRef(null);
   const encouragementAudioRef = useRef(null);
   const completedAudioRef = useRef(null);
+  const animalAudioRef = useRef(null);
+
+  const [mlPredictions, setMlPredictions] = useState(null);
+
+  // Efecto para obtener las predicciones
+  useEffect(() => {
+    const fetchPredictions = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/predictions/${player.name}`);
+        if (!response.ok) {
+          throw new Error(`Error en la respuesta del servidor: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('Predicciones recibidas:', data);
+        setMlPredictions(data);
+      } catch (err) {
+        console.error('Error al obtener predicciones:', err);
+        alert('Hubo un problema al obtener las predicciones. Intenta nuevamente.');
+      }
+    };
+
+    if (player?.name) {
+      fetchPredictions();
+    }
+  }, [player?.name]);
 
   // Objeto para mapear números con sus imágenes de solución
   const solutionImages = {
@@ -63,6 +114,31 @@ const Nivel3 = ({ player, onBack, onConfigClick }) => {
     7: solsiete,
     8: solocho,
     9: solnueve
+  };
+
+  // Objetos para mapear las cantidades con sus audios
+  const patitosAudios = {
+    1: patito1,
+    2: patito2,
+    3: patito3,
+    4: patito4,
+    5: patito5,
+    6: patito6,
+    7: patito7,
+    8: patito8,
+    9: patito9
+  };
+
+  const cerditosAudios = {
+    1: cerdito1,
+    2: cerdito2,
+    3: cerdito3,
+    4: cerdito4,
+    5: cerdito5,
+    6: cerdito6,
+    7: cerdito7,
+    8: cerdito8,
+    9: cerdito9
   };
 
   // Mensajes de felicitación
@@ -275,6 +351,7 @@ const Nivel3 = ({ player, onBack, onConfigClick }) => {
     }
   };
 
+  /*
   // Inicializar los audios de feedback
   useEffect(() => {
     successAudioRef.current = new Audio(success);
@@ -295,6 +372,56 @@ const Nivel3 = ({ player, onBack, onConfigClick }) => {
       }
     };
   }, []);
+  */
+
+  // UseEffect para inicializar los audios de feedback
+  useEffect(() => {
+    successAudioRef.current = new Audio(success);
+    encouragementAudioRef.current = new Audio(encouragement);
+    completedAudioRef.current = new Audio(completed); 
+    return () => {
+      if (successAudioRef.current) {
+        successAudioRef.current.pause();
+        successAudioRef.current.currentTime = 0;
+      }
+      if (encouragementAudioRef.current) {
+        encouragementAudioRef.current.pause();
+        encouragementAudioRef.current.currentTime = 0;
+      }
+      if (completedAudioRef.current) {
+        completedAudioRef.current.pause();
+        completedAudioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
+
+  // UseEffect para reproducir el audio cuando cambia la cantidad
+  useEffect(() => {
+    if (!animalSeleccionado || gameCompleted || showSolution) return;
+
+    if (animalAudioRef.current) {
+      animalAudioRef.current.pause();
+      animalAudioRef.current.currentTime = 0;
+    }
+
+    // Seleccionar el conjunto de audios correcto según el animal
+    const audios = animalSeleccionado === 'patito' ? patitosAudios : cerditosAudios;
+    
+    // Crear y reproducir el nuevo audio
+    if (cantidadActual > 0) {
+      animalAudioRef.current = new Audio(audios[cantidadActual]);
+      animalAudioRef.current.play().catch(error => {
+        console.log("Error al reproducir el audio del animal:", error);
+      });
+    }
+
+    return () => {
+      if (animalAudioRef.current) {
+        animalAudioRef.current.pause();
+        animalAudioRef.current.currentTime = 0;
+      }
+    };
+  }, [cantidadActual, animalSeleccionado]);
 
   const checkAnswer = (input) => {
     if (showFeedback || showSolution || !animalSeleccionado || gameCompleted) return;
@@ -530,7 +657,7 @@ const Nivel3 = ({ player, onBack, onConfigClick }) => {
             details: {
               [cantidadActual]: {
                 errors: updatedStats[cantidadActual].errores,
-                time: 10,
+                time: timeLeft,
                 resultado: false
               }
             }
@@ -713,6 +840,7 @@ const Nivel3 = ({ player, onBack, onConfigClick }) => {
     );
   };
 
+  {/*
   const renderSeleccionAnimal = () => (
     <div className="text-center space-y-8">
       {renderProgressBar()}
@@ -730,7 +858,7 @@ const Nivel3 = ({ player, onBack, onConfigClick }) => {
             <div className="text-2xl font-bold text-purple-600 capitalize">{nombre}s</div>
           </button>
         ))}
-        */}
+        */}{/*
         {Object.entries(animales).map(([nombre, datos]) => (
           <button
             key={nombre}
@@ -750,7 +878,52 @@ const Nivel3 = ({ player, onBack, onConfigClick }) => {
 
       </div>
     </div>
-  );
+  );*/}
+
+  const renderSeleccionAnimal = () => {
+    return (
+      <div className="text-center space-y-8">
+        {renderProgressBar()}
+        <h2 className="text-4xl font-bold text-purple-600">¿Con qué animal quieres practicar?</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {Object.entries(animales).map(([nombre, datos]) => {
+            const prediction = mlPredictions?.level3?.[`${nombre}s`];
+            
+            return (
+              <button
+                key={nombre}
+                className="bg-white pl-2 pr-8 py-6 rounded-xl shadow-xl hover:scale-105 transition-all duration-300 w-full"
+                onClick={() => iniciarJuego(nombre)}
+              >
+                <div className="flex items-center">
+                  <div className="shrink-0 ml-0"> {/* Añadido ml-2 */}
+                    <img 
+                      src={datos.imagen} 
+                      alt={datos.nombre}
+                      className="w-24 h-24 object-contain"
+                    />
+                  </div>
+                  <div className="flex-1 text-left ml-1">
+                    <h3 className="text-2xl font-bold text-purple-600 capitalize mb-2">
+                      {nombre}s
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-2">
+                      Practica contando {nombre}s del 1 al 9
+                    </p>
+                    {prediction && (
+                      <div className="mt-2">
+                        <MensajesPrediccionNivel3 prediction={prediction} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   const renderJuego = () => {
     if (gameCompleted) {
